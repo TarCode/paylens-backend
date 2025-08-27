@@ -66,4 +66,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3001/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1); }).on('error', () => process.exit(1))"
 
 # Use dockerize to wait for Postgres and run migrations + start
-CMD ["dockerize", "-wait", "tcp://db:5432", "-timeout", "30s", "sh", "-c", "npm run db:migrate && npm start"]
+CMD ["dockerize", "-wait", "tcp://db:5432", "-timeout", "30s", "sh", "-c", "npm run db:migrate:prod && npm start"]
