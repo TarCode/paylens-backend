@@ -59,6 +59,8 @@ USER root
 # Install curl and tar for wait-for-it
 RUN apk add --no-cache bash curl tar
 
+RUN npm install -g ts-node typescript
+
 RUN curl -sSL https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh \
 -o /usr/local/bin/wait-for-it.sh && \
 chmod +x /usr/local/bin/wait-for-it.sh
