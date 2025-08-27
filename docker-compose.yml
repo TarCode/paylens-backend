@@ -5,8 +5,8 @@ services:
     build: .
     container_name: node_app
     restart: unless-stopped
-    expose:                       # expose to nginx-proxy (not directly to public)
-      - "3001"
+    expose:
+      - "3001"                    # Exposed to nginx-proxy
     environment:
       DATABASE_URL: ${DATABASE_URL}
       API_BASE_URL: ${API_BASE_URL}
@@ -27,7 +27,7 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL}
-      VIRTUAL_HOST: ${DOMAIN}             # yourdomain.com
+      VIRTUAL_HOST: ${DOMAIN}
       LETSENCRYPT_HOST: ${DOMAIN}
       LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL}
     depends_on:
@@ -35,6 +35,8 @@ services:
     networks:
       - proxy-tier
       - default
+    command: >
+      sh -c "dockerize -wait tcp://db:5432 -timeout 30s npm run db:migrate && npm start"
 
   db:
     image: postgres:15-alpine
@@ -51,6 +53,8 @@ services:
                -c work_mem=4MB
                -c max_connections=50
                -c effective_cache_size=256MB
+    networks:
+      - default
 
   nginx-proxy:
     image: jwilder/nginx-proxy
@@ -87,3 +91,4 @@ volumes:
 networks:
   proxy-tier:
     external: false
+  default:
