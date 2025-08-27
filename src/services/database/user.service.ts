@@ -103,7 +103,15 @@ export class UserService {
         return result.rows[0] || null;
     }
 
-    async incrementUsageCount(userId: string): Promise<{ user: User | null; canIncrement: boolean; error?: string }> {
+    async incrementUsageCount(userId: string): Promise<{ user: User | null; canIncrement: boolean; error?: string; wasReset?: boolean }> {
+        // First, check if user needs monthly reset
+        const resetCheck = await this.checkAndResetMonthlyUsage(userId);
+        let user = resetCheck.user;
+
+        if (!user) {
+            return { user: null, canIncrement: false, error: 'User not found' };
+        }
+
         // Use a database transaction with row-level locking to prevent race conditions
         const query = `
             UPDATE users
@@ -118,7 +126,7 @@ export class UserService {
         const result = await dbService.query<User>(query, [userId]);
 
         if (result.rows.length === 0) {
-            // Check if user exists and get current status
+            // Check current user status after potential reset
             const userCheck = await this.findById(userId);
             if (!userCheck) {
                 return { user: null, canIncrement: false, error: 'User not found' };
@@ -132,14 +140,100 @@ export class UserService {
             return {
                 user: userCheck,
                 canIncrement: false,
-                error: `Usage limit exceeded. Current: ${userCheck.usageCount}, Limit: ${userCheck.monthlyLimit}`
+                error: `Usage limit exceeded. Current: ${userCheck.usageCount}, Limit: ${userCheck.monthlyLimit}`,
+                wasReset: resetCheck.wasReset
             };
         }
 
-        return { user: result.rows[0], canIncrement: true };
+        return {
+            user: result.rows[0],
+            canIncrement: true,
+            wasReset: resetCheck.wasReset
+        };
     }
 
-    // Note: resetMonthlyUsage removed since usage tracking is now client-side
+    async resetMonthlyUsage(userId?: string): Promise<{ resetCount: number; errors: string[] }> {
+        const result = { resetCount: 0, errors: [] as string[] };
+
+        try {
+            let query: string;
+            let params: any[];
+
+            if (userId) {
+                // Reset specific user
+                query = `
+                    UPDATE users
+                    SET usage_count = 0,
+                        last_usage_reset = NOW(),
+                        billing_period_start = DATE_TRUNC('month', NOW()),
+                        updated_at = NOW()
+                    WHERE id = $1
+                    RETURNING *
+                `;
+                params = [userId];
+            } else {
+                // Reset all users whose billing period has ended
+                query = `
+                    UPDATE users
+                    SET usage_count = 0,
+                        last_usage_reset = NOW(),
+                        billing_period_start = DATE_TRUNC('month', NOW()),
+                        updated_at = NOW()
+                    WHERE billing_period_start < DATE_TRUNC('month', NOW())
+                    RETURNING *
+                `;
+                params = [];
+            }
+
+            const dbResult = await dbService.query<User>(query, params);
+            result.resetCount = dbResult.rows.length;
+
+            if (result.resetCount > 0) {
+                console.log(`✅ Reset usage for ${result.resetCount} user(s)`);
+            }
+
+        } catch (error) {
+            const errorMsg = `Failed to reset monthly usage: ${error instanceof Error ? error.message : 'Unknown error'}`;
+            console.error('❌', errorMsg);
+            result.errors.push(errorMsg);
+        }
+
+        return result;
+    }
+
+    // Check if user needs monthly reset
+    async checkAndResetMonthlyUsage(userId: string): Promise<{ wasReset: boolean; user: User | null }> {
+        try {
+            const user = await this.findById(userId);
+            if (!user) {
+                return { wasReset: false, user: null };
+            }
+
+            // Check if current date is in a new month compared to billing_period_start
+            const currentMonth = new Date();
+            currentMonth.setDate(1); // First day of current month
+            currentMonth.setHours(0, 0, 0, 0);
+
+            const lastResetMonth = new Date(user.billingPeriodStart);
+            lastResetMonth.setDate(1);
+            lastResetMonth.setHours(0, 0, 0, 0);
+
+            if (currentMonth > lastResetMonth) {
+                // Reset usage for this user
+                const resetResult = await this.resetMonthlyUsage(userId);
+                if (resetResult.resetCount > 0) {
+                    // Fetch updated user data
+                    const updatedUser = await this.findById(userId);
+                    return { wasReset: true, user: updatedUser };
+                }
+            }
+
+            return { wasReset: false, user };
+        } catch (error) {
+            console.error('Error checking monthly reset:', error);
+            return { wasReset: false, user: null };
+        }
+    }
 
     async validatePassword(plainPassword: string, hashedPassword: string): Promise<boolean> {
         return await bcrypt.compare(plainPassword, hashedPassword);

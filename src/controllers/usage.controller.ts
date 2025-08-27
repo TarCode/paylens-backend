@@ -67,7 +67,8 @@ export class UsageController {
                         message: result.error,
                         code: statusCode === 429 ? 'USAGE_LIMIT_EXCEEDED' : 'INCREMENT_FAILED',
                         currentUsage: result.user?.usageCount,
-                        limit: result.user?.monthlyLimit
+                        limit: result.user?.monthlyLimit,
+                        wasReset: result.wasReset || false
                     }
                 });
             }
@@ -81,7 +82,8 @@ export class UsageController {
                     user: result.user,
                     tokens: tokens,
                     usageCount: result.user!.usageCount,
-                    monthlyLimit: result.user!.monthlyLimit
+                    monthlyLimit: result.user!.monthlyLimit,
+                    wasReset: result.wasReset || false
                 }
             });
         } catch (error) {

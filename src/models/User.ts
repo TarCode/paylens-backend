@@ -10,6 +10,8 @@ export interface User {
     subscriptionTier: 'free' | 'pro' | 'business' | 'enterprise';
     monthlyLimit: number;
     usageCount: number;
+    lastUsageReset: Date;
+    billingPeriodStart: Date;
     isActive: boolean;
     emailVerified: boolean;
     emailVerificationToken?: string;
@@ -36,11 +38,14 @@ export interface UpdateUserData {
     lastName?: string;
     companyName?: string;
     googleId?: string;
+    role?: 'user' | 'admin';
     isActive?: boolean;
     emailVerified?: boolean;
     subscriptionTier?: 'free' | 'pro' | 'business' | 'enterprise';
     monthlyLimit?: number;
     usageCount?: number;
+    lastUsageReset?: Date;
+    billingPeriodStart?: Date;
 }
 
 export interface LoginData {
@@ -60,6 +65,8 @@ export interface JWTPayload {
     subscriptionTier: string;
     usageCount: number;
     monthlyLimit: number;
+    lastUsageReset: Date;
+    billingPeriodStart: Date;
 }
 
 export interface GoogleProfile {

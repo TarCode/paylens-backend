@@ -16,8 +16,10 @@ const createTables = async () => {
         company_name VARCHAR(255),
         role VARCHAR(20) DEFAULT 'user' CHECK (role IN ('user', 'admin')),
         subscription_tier VARCHAR(20) DEFAULT 'free' CHECK (subscription_tier IN ('free', 'pro', 'business', 'enterprise')),
-        monthly_limit INTEGER DEFAULT 5,
+        monthly_limit INTEGER DEFAULT 100,
         usage_count INTEGER DEFAULT 0,
+        last_usage_reset TIMESTAMP DEFAULT NOW(),
+        billing_period_start TIMESTAMP DEFAULT NOW(),
         is_active BOOLEAN DEFAULT true,
         email_verified BOOLEAN DEFAULT false,
         email_verification_token VARCHAR(255),
@@ -41,6 +43,18 @@ const createTables = async () => {
       await dbService.query(`ALTER TABLE users ALTER COLUMN password DROP NOT NULL;`);
     } catch (error) {
       console.log('Note: google_id column may already exist or password constraint already modified');
+    }
+
+    // Add usage reset tracking columns if they don't exist
+    try {
+      await dbService.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_usage_reset TIMESTAMP DEFAULT NOW();`);
+      await dbService.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS billing_period_start TIMESTAMP DEFAULT NOW();`);
+
+      // Update default monthly_limit for existing users
+      await dbService.query(`ALTER TABLE users ALTER COLUMN monthly_limit SET DEFAULT 100;`);
+      await dbService.query(`UPDATE users SET monthly_limit = 100 WHERE monthly_limit = 5;`);
+    } catch (error) {
+      console.log('Note: Usage reset columns may already exist or monthly_limit already updated');
     }
 
     await dbService.query(`CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id);`);

@@ -183,7 +183,9 @@ export class AuthService {
             role: user.role,
             subscriptionTier: user.subscriptionTier,
             usageCount: user.usageCount,
-            monthlyLimit: user.monthlyLimit
+            monthlyLimit: user.monthlyLimit,
+            lastUsageReset: user.lastUsageReset,
+            billingPeriodStart: user.billingPeriodStart
         };
 
         const accessToken = (jwt.sign as any)(payload, this.jwtSecret, {

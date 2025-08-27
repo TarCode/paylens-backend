@@ -11,6 +11,8 @@ declare global {
             subscriptionTier: string;
             usageCount: number;
             monthlyLimit: number;
+            lastUsageReset: Date;
+            billingPeriodStart: Date;
         }
     }
 }
@@ -46,7 +48,9 @@ export const authenticateToken = async (
             role: decoded.role || 'user',
             subscriptionTier: decoded.subscriptionTier || 'free',
             usageCount: decoded.usageCount || 0,
-            monthlyLimit: decoded.monthlyLimit || 5
+            monthlyLimit: decoded.monthlyLimit || 100,
+            lastUsageReset: decoded.lastUsageReset || new Date(),
+            billingPeriodStart: decoded.billingPeriodStart || new Date()
         };
 
         next();
