@@ -1,38 +1,89 @@
-    version: '3.8'
-    services:
-      app:
-        build: .
-        ports:
-          - "3001:3001" # Adjust port as needed
-        environment:
-          DATABASE_URL: ${DATABASE_URL}
-          API_BASE_URL: ${API_BASE_URL}
-          DB_HOST: ${DB_HOST}
-          DB_PORT: ${DB_PORT}
-          DB_NAME: ${DB_NAME}
-          DB_USER: ${DB_USER}
-          DB_PASSWORD: ${DB_PASSWORD}
-          JWT_SECRET: ${JWT_SECRET}
-          JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
-          REFRESH_TOKEN_SECRET: ${REFRESH_TOKEN_SECRET}
-          REFRESH_TOKEN_EXPIRES_IN: ${REFRESH_TOKEN_EXPIRES_IN}
-          BCRYPT_ROUNDS: ${BCRYPT_ROUNDS}
-          RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS}
-          RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS}
-          MAX_FILE_SIZE: ${MAX_FILE_SIZE}
-          ALLOWED_FILE_TYPES: ${ALLOWED_FILE_TYPES}
-          GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
-          GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
-          GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL}
-        depends_on:
-          - db # If using Dockerized PostgreSQL
-      db: # Only if using Dockerized PostgreSQL
-        image: postgres:13
-        environment:
-          POSTGRES_DB: ${DB_NAME}
-          POSTGRES_USER: ${DB_USER}
-          POSTGRES_PASSWORD: ${DB_PASSWORD}
-        volumes:
-          - pgdata:/var/lib/postgresql/data
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: node_app
+    restart: unless-stopped
+    expose:                       # expose to nginx-proxy (not directly to public)
+      - "3001"
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      API_BASE_URL: ${API_BASE_URL}
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
+      REFRESH_TOKEN_SECRET: ${REFRESH_TOKEN_SECRET}
+      REFRESH_TOKEN_EXPIRES_IN: ${REFRESH_TOKEN_EXPIRES_IN}
+      BCRYPT_ROUNDS: ${BCRYPT_ROUNDS}
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS}
+      RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS}
+      MAX_FILE_SIZE: ${MAX_FILE_SIZE}
+      ALLOWED_FILE_TYPES: ${ALLOWED_FILE_TYPES}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL}
+      VIRTUAL_HOST: ${DOMAIN}             # yourdomain.com
+      LETSENCRYPT_HOST: ${DOMAIN}
+      LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL}
+    depends_on:
+      - db
+    networks:
+      - proxy-tier
+      - default
+
+  db:
+    image: postgres:15-alpine
+    container_name: postgres_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
-      pgdata: # Only if using Dockerized PostgreSQL
+      - pgdata:/var/lib/postgresql/data
+    command: >
+      postgres -c shared_buffers=128MB
+               -c work_mem=4MB
+               -c max_connections=50
+               -c effective_cache_size=256MB
+
+  nginx-proxy:
+    image: jwilder/nginx-proxy
+    container_name: nginx_proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /etc/nginx/vhost.d
+      - /usr/share/nginx/html
+      - /etc/nginx/certs
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+    networks:
+      - proxy-tier
+
+  letsencrypt:
+    image: nginxproxy/acme-companion
+    container_name: nginx_proxy_acme
+    restart: unless-stopped
+    environment:
+      DEFAULT_EMAIL: ${LETSENCRYPT_EMAIL}
+    volumes:
+      - /etc/nginx/certs
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    volumes_from:
+      - nginx-proxy
+    networks:
+      - proxy-tier
+
+volumes:
+  pgdata:
+
+networks:
+  proxy-tier:
+    external: false
