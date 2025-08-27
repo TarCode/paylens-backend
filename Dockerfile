@@ -54,8 +54,9 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     process.exit(res.statusCode === 200 ? 0 : 1) \
   }).on('error', () => process.exit(1))"
 
-COPY wait-for-it.sh /usr/local/bin/wait-for-it.sh
-RUN chmod +x /usr/local/bin/wait-for-it.sh
+RUN curl -sSL https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh \
+-o /usr/local/bin/wait-for-it.sh && \
+chmod +x /usr/local/bin/wait-for-it.sh
 
 CMD ["wait-for-it.sh", "db:5432", "--", "sh", "-c", "npm run db:migrate && npm start"]
 
