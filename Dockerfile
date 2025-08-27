@@ -54,6 +54,10 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     process.exit(res.statusCode === 200 ? 0 : 1) \
   }).on('error', () => process.exit(1))"
 
+
+# Install curl and tar for wait-for-it
+RUN apk add --no-cache curl tar
+
 RUN curl -sSL https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh \
 -o /usr/local/bin/wait-for-it.sh && \
 chmod +x /usr/local/bin/wait-for-it.sh
