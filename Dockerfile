@@ -57,7 +57,7 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 # Make sure we are root
 USER root
 # Install curl and tar for wait-for-it
-RUN apk add --no-cache curl tar
+RUN apk add --no-cache bash curl tar
 
 RUN curl -sSL https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh \
 -o /usr/local/bin/wait-for-it.sh && \
