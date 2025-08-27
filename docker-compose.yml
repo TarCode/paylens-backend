@@ -1,0 +1,38 @@
+    version: '3.8'
+    services:
+      app:
+        build: .
+        ports:
+          - "3001:3001" # Adjust port as needed
+        environment:
+          DATABASE_URL: ${DATABASE_URL}
+          API_BASE_URL: ${API_BASE_URL}
+          DB_HOST: ${DB_HOST}
+          DB_PORT: ${DB_PORT}
+          DB_NAME: ${DB_NAME}
+          DB_USER: ${DB_USER}
+          DB_PASSWORD: ${DB_PASSWORD}
+          JWT_SECRET: ${JWT_SECRET}
+          JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
+          REFRESH_TOKEN_SECRET: ${REFRESH_TOKEN_SECRET}
+          REFRESH_TOKEN_EXPIRES_IN: ${REFRESH_TOKEN_EXPIRES_IN}
+          BCRYPT_ROUNDS: ${BCRYPT_ROUNDS}
+          RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS}
+          RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS}
+          MAX_FILE_SIZE: ${MAX_FILE_SIZE}
+          ALLOWED_FILE_TYPES: ${ALLOWED_FILE_TYPES}
+          GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+          GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+          GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL}
+        depends_on:
+          - db # If using Dockerized PostgreSQL
+      db: # Only if using Dockerized PostgreSQL
+        image: postgres:13
+        environment:
+          POSTGRES_DB: ${DB_NAME}
+          POSTGRES_USER: ${DB_USER}
+          POSTGRES_PASSWORD: ${DB_PASSWORD}
+        volumes:
+          - pgdata:/var/lib/postgresql/data
+    volumes:
+      pgdata: # Only if using Dockerized PostgreSQL

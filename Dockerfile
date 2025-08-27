@@ -1,14 +1,16 @@
 # Multi-stage build for PayLens Backend
-FROM node:18-alpine AS base
+FROM node:20.10.0-alpine AS base
 
 # Install dependencies only (for caching)
 FROM base AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
+ENV NODE_ENV=development
+
 # Copy package files
 COPY package*.json ./
-RUN npm ci --only=production && npm cache clean --force
+RUN npm ci --only=production && npm cache clean --force 
 
 # Build stage
 FROM base AS builder
@@ -43,6 +45,7 @@ COPY src/scripts ./dist/scripts
 
 USER paylens
 
+
 EXPOSE 3001
 
 # Health check
@@ -51,4 +54,8 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     process.exit(res.statusCode === 200 ? 0 : 1) \
   }).on('error', () => process.exit(1))"
 
-CMD ["npm", "start"]
+COPY wait-for-it.sh /usr/local/bin/wait-for-it.sh
+RUN chmod +x /usr/local/bin/wait-for-it.sh
+
+CMD ["wait-for-it.sh", "db:5432", "--", "sh", "-c", "npm run db:migrate && npm start"]
+
