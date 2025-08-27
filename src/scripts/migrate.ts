@@ -1,4 +1,4 @@
-import { dbService } from '../services/database/database.service';
+import { dbService } from '../services/database.service';
 
 const createTables = async () => {
   console.log('Starting database migration...');

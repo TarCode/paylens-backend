@@ -1,9 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import { body, validationResult } from 'express-validator';
-import { authService } from '../../services/auth/auth.service';
-import { userService } from '../../services/database/user.service';
-import { AuthRequest } from '../../middleware/auth.middleware';
-import { GoogleProfile } from '../../models/User';
+import { authService } from '../services/auth.service';
+import { userService } from '../services/user.service';
+import { AuthRequest } from '../middleware/auth.middleware';
+import { GoogleProfile } from '../models/User';
 
 export class AuthController {
     // Validation rules

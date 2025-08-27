@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import { dbService } from './database.service';
-import { User, CreateUserData, UpdateUserData } from '../../models/User';
+import { User, CreateUserData, UpdateUserData } from '../models/User';
 
 export class UserService {
     async createUser(userData: CreateUserData): Promise<User> {

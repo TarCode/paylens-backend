@@ -1,7 +1,7 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.middleware';
-import { userService } from '../services/database/user.service';
-import { authService } from '../services/auth/auth.service';
+import { userService } from '../services/user.service';
+import { authService } from '../services/auth.service';
 
 // In-memory request deduplication cache (use Redis in production)
 const recentRequests = new Map<string, number>();

@@ -1,4 +1,4 @@
-import { userService } from './database/user.service';
+import { userService } from './user.service';
 
 export class SchedulerService {
     private static instance: SchedulerService;
@@ -50,7 +50,6 @@ export class SchedulerService {
     private async performMonthlyReset(): Promise<void> {
         try {
             const now = new Date();
-            const currentMonth = now.getMonth();
             const currentDay = now.getDate();
 
             // Only reset on the 1st of each month

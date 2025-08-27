@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
-import { userService } from '../database/user.service';
-import { User, AuthTokens, JWTPayload, GoogleProfile } from '../../models/User';
+import { userService } from './user.service';
+import { User, AuthTokens, JWTPayload, GoogleProfile } from '../models/User';
 
 export class AuthService {
     private jwtSecret: string;
