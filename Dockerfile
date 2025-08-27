@@ -54,7 +54,8 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     process.exit(res.statusCode === 200 ? 0 : 1) \
   }).on('error', () => process.exit(1))"
 
-
+# Make sure we are root
+USER root
 # Install curl and tar for wait-for-it
 RUN apk add --no-cache curl tar
 
