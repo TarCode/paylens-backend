@@ -27,7 +27,7 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL}
-      VIRTUAL_HOST: ${DOMAIN}             # api.paylens.co.za
+      VIRTUAL_HOST: ${DOMAIN}
       LETSENCRYPT_HOST: ${DOMAIN}
       LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL}
     depends_on:
@@ -63,7 +63,7 @@ services:
       - /etc/nginx/certs
       - /etc/nginx/vhost.d
       - /usr/share/nginx/html
-      - /var/run/docker.sock:/tmp/docker.sock:ro  # okay for nginx-proxy
+      - /var/run/docker.sock:/tmp/docker.sock:ro
     networks:
       - proxy-tier
 
@@ -71,6 +71,7 @@ services:
     image: nginxproxy/acme-companion
     container_name: nginx_proxy_acme
     restart: unless-stopped
+    user: root                             # run as root to read docker.sock
     environment:
       DEFAULT_EMAIL: ${LETSENCRYPT_EMAIL}
       NGINX_PROXY_CONTAINER: nginx_proxy
@@ -79,7 +80,7 @@ services:
       - /etc/nginx/certs
       - /etc/nginx/vhost.d
       - /usr/share/nginx/html
-      - /var/run/docker.sock:/tmp/docker.sock:ro  # <-- must match nginx-proxy
+      - /var/run/docker.sock:/tmp/docker.sock:ro:z  # SELinux safe
     depends_on:
       - nginx-proxy
     networks:
