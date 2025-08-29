@@ -19,14 +19,7 @@ services:
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
       REFRESH_TOKEN_SECRET: ${REFRESH_TOKEN_SECRET}
       REFRESH_TOKEN_EXPIRES_IN: ${REFRESH_TOKEN_EXPIRES_IN}
-      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS}
-      RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS}
-      MAX_FILE_SIZE: ${MAX_FILE_SIZE}
-      ALLOWED_FILE_TYPES: ${ALLOWED_FILE_TYPES}
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
-      GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL}
-      VIRTUAL_HOST: ${DOMAIN}             
+      VIRTUAL_HOST: ${DOMAIN}             # e.g., api.paylens.co.za
       LETSENCRYPT_HOST: ${DOMAIN}
       LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL}
     depends_on:
@@ -56,8 +49,6 @@ services:
     ports:
       - "80:80"
       - "443:443"
-    environment:
-      ENABLE_IPV6: 'false'
     volumes:
       - /etc/nginx/certs
       - /etc/nginx/vhost.d
@@ -70,17 +61,17 @@ services:
     image: nginxproxy/acme-companion
     container_name: nginx_proxy_acme
     restart: unless-stopped
-    user: "0:0"  # run as root
-    environment:
-      DEFAULT_EMAIL: ${LETSENCRYPT_EMAIL}
-      NGINX_PROXY_CONTAINER: nginx_proxy
-    volumes:
-      - /etc/nginx/certs
-      - /etc/nginx/vhost.d
-      - /usr/share/nginx/html
-      - /var/run/docker.sock:/var/run/docker.sock:rw
     depends_on:
       - nginx-proxy
+    environment:
+      NGINX_PROXY_CONTAINER: nginx_proxy
+      DEFAULT_EMAIL: ${LETSENCRYPT_EMAIL}
+      ACME_CA_URI: https://acme-v02.api.letsencrypt.org/directory
+    volumes:
+      - /etc/nginx/certs:/etc/nginx/certs:rw
+      - /etc/nginx/vhost.d:/etc/nginx/vhost.d:rw
+      - /usr/share/nginx/html:/usr/share/nginx/html:rw
+      - /var/run/docker.sock:/tmp/docker.sock:ro
     networks:
       - proxy-tier
 
