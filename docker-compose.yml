@@ -6,7 +6,7 @@ services:
     container_name: node_app
     restart: unless-stopped
     expose:
-      - "3001"
+      - "3001"  # expose only to Traefik
     environment:
       DATABASE_URL: ${DATABASE_URL}
       API_BASE_URL: ${API_BASE_URL}
@@ -19,13 +19,22 @@ services:
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
       REFRESH_TOKEN_SECRET: ${REFRESH_TOKEN_SECRET}
       REFRESH_TOKEN_EXPIRES_IN: ${REFRESH_TOKEN_EXPIRES_IN}
-      VIRTUAL_HOST: ${DOMAIN}             # e.g., api.paylens.co.za
-      LETSENCRYPT_HOST: ${DOMAIN}
-      LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL}
-    depends_on:
-      - db
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS}
+      RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS}
+      MAX_FILE_SIZE: ${MAX_FILE_SIZE}
+      ALLOWED_FILE_TYPES: ${ALLOWED_FILE_TYPES}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL}
     networks:
       - proxy-tier
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.node_app.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.node_app.entrypoints=websecure"
+      - "traefik.http.routers.node_app.tls.certresolver=le"
+    depends_on:
+      - db
     command: >
       sh -c "dockerize -wait tcp://db:5432 -timeout 30s npm run db:migrate:prod && npm start"
 
@@ -42,36 +51,24 @@ services:
     networks:
       - proxy-tier
 
-  nginx-proxy:
-    image: jwilder/nginx-proxy
-    container_name: nginx_proxy
+  traefik:
+    image: traefik:v2.11
+    container_name: traefik
     restart: unless-stopped
     ports:
-      - "80:80"
-      - "443:443"
+      - "80:80"      # HTTP
+      - "443:443"    # HTTPS
+    command:
+      - "--api.insecure=true"  # optional dashboard
+      - "--providers.docker=true"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.le.acme.tlschallenge=true"
+      - "--certificatesresolvers.le.acme.email=${LETSENCRYPT_EMAIL}"
+      - "--certificatesresolvers.le.acme.storage=/letsencrypt/acme.json"
     volumes:
-      - /etc/nginx/certs
-      - /etc/nginx/vhost.d
-      - /usr/share/nginx/html
-      - /var/run/docker.sock:/tmp/docker.sock:ro
-    networks:
-      - proxy-tier
-
-  letsencrypt:
-    image: nginxproxy/acme-companion
-    container_name: nginx_proxy_acme
-    restart: unless-stopped
-    depends_on:
-      - nginx-proxy
-    environment:
-      NGINX_PROXY_CONTAINER: nginx_proxy
-      DEFAULT_EMAIL: ${LETSENCRYPT_EMAIL}
-      ACME_CA_URI: https://acme-v02.api.letsencrypt.org/directory
-    volumes:
-      - /etc/nginx/certs:/etc/nginx/certs:rw
-      - /etc/nginx/vhost.d:/etc/nginx/vhost.d:rw
-      - /usr/share/nginx/html:/usr/share/nginx/html:rw
-      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./letsencrypt:/letsencrypt
     networks:
       - proxy-tier
 
