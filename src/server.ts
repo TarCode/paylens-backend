@@ -33,10 +33,18 @@ const limiter = rateLimit({
 
 app.use(limiter);
 
-console.log("process.env.CORS_ORIGIN", process.env.CORS_ORIGIN);
+const allowedOrigins = process.env.CORS_ORIGINS
+    ? process.env.CORS_ORIGINS.split(",").map(origin => origin.trim())
+    : ["http://localhost:3000"];
 
 app.use(cors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+    origin: (origin, callback) => {
+        if (!origin) return callback(null, true); // allow server-to-server or curl
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+        return callback(new Error("Not allowed by CORS"));
+    },
     credentials: true,
 }));
 
