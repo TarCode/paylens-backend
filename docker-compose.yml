@@ -3,12 +3,13 @@ version: '3.8'
 services:
   app:
     build: .
-    container_name: paylens_app
+    container_name: node_app
     restart: unless-stopped
     expose:
       - "3001"
     environment:
       DATABASE_URL: ${DATABASE_URL}
+      API_BASE_URL: ${API_BASE_URL}
       DB_HOST: ${DB_HOST}
       DB_PORT: ${DB_PORT}
       DB_NAME: ${DB_NAME}
@@ -18,6 +19,16 @@ services:
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
       REFRESH_TOKEN_SECRET: ${REFRESH_TOKEN_SECRET}
       REFRESH_TOKEN_EXPIRES_IN: ${REFRESH_TOKEN_EXPIRES_IN}
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS}
+      RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS}
+      MAX_FILE_SIZE: ${MAX_FILE_SIZE}
+      ALLOWED_FILE_TYPES: ${ALLOWED_FILE_TYPES}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL}
+      VIRTUAL_HOST: ${DOMAIN}             
+      LETSENCRYPT_HOST: ${DOMAIN}
+      LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL}
     depends_on:
       - db
     networks:
@@ -27,7 +38,7 @@ services:
 
   db:
     image: postgres:15-alpine
-    container_name: paylens_db
+    container_name: postgres_db
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${DB_NAME}
@@ -39,7 +50,7 @@ services:
       - proxy-tier
 
   nginx-proxy:
-    image: jwilder/nginx-proxy:latest
+    image: jwilder/nginx-proxy
     container_name: nginx_proxy
     restart: unless-stopped
     ports:
@@ -48,31 +59,31 @@ services:
     environment:
       ENABLE_IPV6: 'false'
     volumes:
-      - /etc/nginx/certs:/etc/nginx/certs:rw
-      - /etc/nginx/vhost.d:/etc/nginx/vhost.d:rw
-      - /usr/share/nginx/html:/usr/share/nginx/html:rw
+      - /etc/nginx/certs
+      - /etc/nginx/vhost.d
+      - /usr/share/nginx/html
       - /var/run/docker.sock:/tmp/docker.sock:ro
     networks:
       - proxy-tier
 
   letsencrypt:
-    image: nginxproxy/acme-companion:latest
+    image: nginxproxy/acme-companion
     container_name: nginx_proxy_acme
     restart: unless-stopped
-    user: root        # <-- add this line
+    user: "0:0"
     environment:
-      NGINX_PROXY_CONTAINER: nginx_proxy
       DEFAULT_EMAIL: ${LETSENCRYPT_EMAIL}
+      NGINX_PROXY_CONTAINER: nginx_proxy
+      ACME_CA_URI: https://acme-v02.api.letsencrypt.org/directory
     volumes:
-      - /etc/nginx/certs:/etc/nginx/certs:rw
-      - /etc/nginx/vhost.d:/etc/nginx/vhost.d:rw
-      - /usr/share/nginx/html:/usr/share/nginx/html:rw
-      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - /etc/nginx/certs
+      - /etc/nginx/vhost.d
+      - /usr/share/nginx/html
+      - /var/run/docker.sock:/tmp/docker.sock:rw,z
     depends_on:
       - nginx-proxy
     networks:
       - proxy-tier
-
 
 volumes:
   pgdata:
