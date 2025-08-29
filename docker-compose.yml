@@ -62,12 +62,10 @@ services:
     ports:
       - "80:80"
       - "443:443"
-    environment:
-      ENABLE_IPV6: 'false'
     volumes:
+      - /etc/nginx/certs
       - /etc/nginx/vhost.d
       - /usr/share/nginx/html
-      - /etc/nginx/certs
       - /var/run/docker.sock:/tmp/docker.sock:ro
     networks:
       - proxy-tier
@@ -80,10 +78,10 @@ services:
       DEFAULT_EMAIL: ${LETSENCRYPT_EMAIL}
       NGINX_PROXY_CONTAINER: nginx_proxy
     volumes:
+      - /etc/nginx/certs
       - /etc/nginx/vhost.d
       - /usr/share/nginx/html
-      - /etc/nginx/certs
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/run/docker.sock:/tmp/docker.sock:ro
     depends_on:
       - nginx-proxy
     networks:
