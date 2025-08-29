@@ -6,7 +6,7 @@ services:
     container_name: node_app
     restart: unless-stopped
     expose:
-      - "3001"                 # internal only, not published
+      - "3001"
     environment:
       DATABASE_URL: ${DATABASE_URL}
       API_BASE_URL: ${API_BASE_URL}
@@ -47,11 +47,6 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - pgdata:/var/lib/postgresql/data
-    command: >
-      postgres -c shared_buffers=128MB
-               -c work_mem=4MB
-               -c max_connections=50
-               -c effective_cache_size=256MB
     networks:
       - proxy-tier
 
@@ -65,10 +60,10 @@ services:
     environment:
       ENABLE_IPV6: 'false'
     volumes:
-      - /etc/nginx/certs
-      - /etc/nginx/vhost.d
-      - /usr/share/nginx/html
-      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - /etc/nginx/certs:/etc/nginx/certs:rw
+      - /etc/nginx/vhost.d:/etc/nginx/vhost.d:rw
+      - /usr/share/nginx/html:/usr/share/nginx/html:rw
+      - /var/run/docker.sock:/tmp/docker.sock:ro   # MUST be /tmp/docker.sock
     networks:
       - proxy-tier
 
@@ -79,11 +74,12 @@ services:
     environment:
       DEFAULT_EMAIL: ${LETSENCRYPT_EMAIL}
       NGINX_PROXY_CONTAINER: nginx_proxy
+      ACME_CA_URI: https://acme-v02.api.letsencrypt.org/directory
     volumes:
-      - /etc/nginx/certs
-      - /etc/nginx/vhost.d
-      - /usr/share/nginx/html
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /etc/nginx/certs:/etc/nginx/certs:rw
+      - /etc/nginx/vhost.d:/etc/nginx/vhost.d:rw
+      - /usr/share/nginx/html:/usr/share/nginx/html:rw
+      - /var/run/docker.sock:/tmp/docker.sock:ro
     depends_on:
       - nginx-proxy
     networks:
