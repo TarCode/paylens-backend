@@ -55,23 +55,23 @@ services:
     networks:
       - proxy-tier
 
-letsencrypt:
-  image: nginxproxy/acme-companion:latest
-  container_name: nginx_proxy_acme
-  restart: unless-stopped
-  user: root        # <-- add this line
-  environment:
-    NGINX_PROXY_CONTAINER: nginx_proxy
-    DEFAULT_EMAIL: ${LETSENCRYPT_EMAIL}
-  volumes:
-    - /etc/nginx/certs:/etc/nginx/certs:rw
-    - /etc/nginx/vhost.d:/etc/nginx/vhost.d:rw
-    - /usr/share/nginx/html:/usr/share/nginx/html:rw
-    - /var/run/docker.sock:/tmp/docker.sock:ro
-  depends_on:
-    - nginx-proxy
-  networks:
-    - proxy-tier
+  letsencrypt:
+    image: nginxproxy/acme-companion:latest
+    container_name: nginx_proxy_acme
+    restart: unless-stopped
+    user: root        # <-- add this line
+    environment:
+      NGINX_PROXY_CONTAINER: nginx_proxy
+      DEFAULT_EMAIL: ${LETSENCRYPT_EMAIL}
+    volumes:
+      - /etc/nginx/certs:/etc/nginx/certs:rw
+      - /etc/nginx/vhost.d:/etc/nginx/vhost.d:rw
+      - /usr/share/nginx/html:/usr/share/nginx/html:rw
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+    depends_on:
+      - nginx-proxy
+    networks:
+      - proxy-tier
 
 
 volumes:
