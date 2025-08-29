@@ -27,11 +27,9 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL}
-      VIRTUAL_HOST: ${DOMAIN}
+      VIRTUAL_HOST: ${DOMAIN}             # api.paylens.co.za
       LETSENCRYPT_HOST: ${DOMAIN}
       LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL}
-    labels:
-      - "traefik.enable=true"          # optional for other reverse proxies
     depends_on:
       - db
     networks:
@@ -62,9 +60,9 @@ services:
     environment:
       ENABLE_IPV6: 'false'
     volumes:
-      - /etc/nginx/certs
-      - /etc/nginx/vhost.d
-      - /usr/share/nginx/html
+      - /etc/nginx/certs:/etc/nginx/certs:rw
+      - /etc/nginx/vhost.d:/etc/nginx/vhost.d:rw
+      - /usr/share/nginx/html:/usr/share/nginx/html:rw
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - proxy-tier
@@ -78,9 +76,9 @@ services:
       DEFAULT_EMAIL: ${LETSENCRYPT_EMAIL}
       ACME_CA_URI: https://acme-v02.api.letsencrypt.org/directory
     volumes:
-      - /etc/nginx/certs
-      - /etc/nginx/vhost.d
-      - /usr/share/nginx/html
+      - /etc/nginx/certs:/etc/nginx/certs:rw
+      - /etc/nginx/vhost.d:/etc/nginx/vhost.d:rw
+      - /usr/share/nginx/html:/usr/share/nginx/html:rw
       - /var/run/docker.sock:/var/run/docker.sock:ro
     depends_on:
       - nginx-proxy
