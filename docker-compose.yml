@@ -6,7 +6,7 @@ services:
     container_name: node_app
     restart: unless-stopped
     expose:
-      - "3001"
+      - "3001"   # internal only
     environment:
       DATABASE_URL: ${DATABASE_URL}
       API_BASE_URL: ${API_BASE_URL}
@@ -27,7 +27,7 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL}
-      VIRTUAL_HOST: ${DOMAIN}
+      VIRTUAL_HOST: ${DOMAIN}             # api.paylens.co.za
       LETSENCRYPT_HOST: ${DOMAIN}
       LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL}
     depends_on:
@@ -51,7 +51,7 @@ services:
       - proxy-tier
 
   nginx-proxy:
-    image: jwilder/nginx-proxy
+    image: jwilder/nginx-proxy:latest
     container_name: nginx_proxy
     restart: unless-stopped
     ports:
@@ -63,36 +63,27 @@ services:
       - /etc/nginx/certs
       - /etc/nginx/vhost.d
       - /usr/share/nginx/html
-      - type: bind
-        source: /var/run/docker.sock
-        target: /tmp/docker.sock
-        read_only: true
-        # SELinux label can be added if needed in long form (optional)
+      - /var/run/docker.sock:/tmp/docker.sock:ro
     networks:
       - proxy-tier
 
   letsencrypt:
-    image: nginxproxy/acme-companion
+    image: nginxproxy/acme-companion:latest
     container_name: nginx_proxy_acme
     restart: unless-stopped
-    user: root
     environment:
-      DEFAULT_EMAIL: ${LETSENCRYPT_EMAIL}
       NGINX_PROXY_CONTAINER: nginx_proxy
       ACME_CA_URI: https://acme-v02.api.letsencrypt.org/directory
+      DEFAULT_EMAIL: ${LETSENCRYPT_EMAIL}
     volumes:
       - /etc/nginx/certs
       - /etc/nginx/vhost.d
       - /usr/share/nginx/html
-      - type: bind
-        source: /var/run/docker.sock
-        target: /tmp/docker.sock
-        read_only: true
+      - /var/run/docker.sock:/tmp/docker.sock:ro
     depends_on:
       - nginx-proxy
     networks:
       - proxy-tier
-
 
 volumes:
   pgdata:
