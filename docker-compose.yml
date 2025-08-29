@@ -5,7 +5,7 @@ services:
     build: .
     container_name: node_app
     restart: unless-stopped
-    ports:
+    expose:
       - "3001"                 # internal only, not published
     environment:
       DATABASE_URL: ${DATABASE_URL}
@@ -27,7 +27,7 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL}
-      VIRTUAL_HOST: ${DOMAIN}             # yourdomain.com
+      VIRTUAL_HOST: ${DOMAIN}             # api.paylens.co.za
       LETSENCRYPT_HOST: ${DOMAIN}
       LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL}
     depends_on:
@@ -62,11 +62,13 @@ services:
     ports:
       - "80:80"
       - "443:443"
+    environment:
+      ENABLE_IPV6: 'false'
     volumes:
       - /etc/nginx/certs
       - /etc/nginx/vhost.d
       - /usr/share/nginx/html
-      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - proxy-tier
 
@@ -81,7 +83,7 @@ services:
       - /etc/nginx/certs
       - /etc/nginx/vhost.d
       - /usr/share/nginx/html
-      - /var/run/docker.sock:/var/run/docker.sock:ro  # <-- make sure this is here
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     depends_on:
       - nginx-proxy
     networks:
