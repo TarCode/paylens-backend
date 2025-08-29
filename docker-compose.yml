@@ -6,7 +6,7 @@ services:
     container_name: node_app
     restart: unless-stopped
     expose:
-      - "3001"   # internal only
+      - "3001"
     environment:
       DATABASE_URL: ${DATABASE_URL}
       API_BASE_URL: ${API_BASE_URL}
@@ -27,9 +27,11 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL}
-      VIRTUAL_HOST: ${DOMAIN}             # api.paylens.co.za
+      VIRTUAL_HOST: ${DOMAIN}
       LETSENCRYPT_HOST: ${DOMAIN}
       LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL}
+    labels:
+      - "traefik.enable=true"          # optional for other reverse proxies
     depends_on:
       - db
     networks:
@@ -51,7 +53,7 @@ services:
       - proxy-tier
 
   nginx-proxy:
-    image: jwilder/nginx-proxy:latest
+    image: jwilder/nginx-proxy
     container_name: nginx_proxy
     restart: unless-stopped
     ports:
@@ -63,23 +65,23 @@ services:
       - /etc/nginx/certs
       - /etc/nginx/vhost.d
       - /usr/share/nginx/html
-      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - proxy-tier
 
   letsencrypt:
-    image: nginxproxy/acme-companion:latest
+    image: nginxproxy/acme-companion
     container_name: nginx_proxy_acme
     restart: unless-stopped
     environment:
       NGINX_PROXY_CONTAINER: nginx_proxy
-      ACME_CA_URI: https://acme-v02.api.letsencrypt.org/directory
       DEFAULT_EMAIL: ${LETSENCRYPT_EMAIL}
+      ACME_CA_URI: https://acme-v02.api.letsencrypt.org/directory
     volumes:
       - /etc/nginx/certs
       - /etc/nginx/vhost.d
       - /usr/share/nginx/html
-      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     depends_on:
       - nginx-proxy
     networks:
