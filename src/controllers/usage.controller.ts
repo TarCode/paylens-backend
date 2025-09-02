@@ -10,14 +10,7 @@ const REQUEST_DEDUPE_WINDOW = 5000; // 5 seconds
 export class UsageController {
     async incrementUsage(req: AuthRequest, res: Response): Promise<Response> {
         try {
-            if (!req.user) {
-                return res.status(401).json({
-                    success: false,
-                    error: { message: 'User not authenticated' }
-                });
-            }
-
-            const userId = req.user.id;
+            const userId = req.user!.id;
             const requestKey = `${userId}-${Date.now()}`;
             const now = Date.now();
 
@@ -97,14 +90,8 @@ export class UsageController {
 
     async getUsage(req: AuthRequest, res: Response): Promise<Response> {
         try {
-            if (!req.user) {
-                return res.status(401).json({
-                    success: false,
-                    error: { message: 'User not authenticated' }
-                });
-            }
-
-            const userId = req.user.id;
+            // req.user is guaranteed to exist due to authenticateAndEnsureUser middleware
+            const userId = req.user!.id;
             const user = await userService.findById(userId);
 
             if (!user) {

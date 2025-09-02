@@ -182,16 +182,7 @@ export class AuthController {
 
     async getProfile(req: AuthRequest, res: Response, next: NextFunction): Promise<Response | void> {
         try {
-            if (!req.user) {
-                return res.status(401).json({
-                    success: false,
-                    error: {
-                        message: 'User not authenticated'
-                    }
-                });
-            }
-
-            const user = await userService.findById(req.user.id);
+            const user = await userService.findById(req.user!.id);
             if (!user) {
                 return res.status(404).json({
                     success: false,
@@ -216,15 +207,6 @@ export class AuthController {
 
     async updateProfile(req: AuthRequest, res: Response, next: NextFunction): Promise<Response | void> {
         try {
-            if (!req.user) {
-                return res.status(401).json({
-                    success: false,
-                    error: {
-                        message: 'User not authenticated'
-                    }
-                });
-            }
-
             const { firstName, lastName, companyName } = req.body;
 
             const updateData: any = {};
@@ -232,7 +214,7 @@ export class AuthController {
             if (lastName !== undefined) updateData.lastName = lastName;
             if (companyName !== undefined) updateData.companyName = companyName;
 
-            const updatedUser = await userService.updateUser(req.user.id, updateData);
+            const updatedUser = await userService.updateUser(req.user!.id, updateData);
             if (!updatedUser) {
                 return res.status(404).json({
                     success: false,
@@ -258,15 +240,6 @@ export class AuthController {
 
     async changePassword(req: AuthRequest, res: Response, next: NextFunction): Promise<Response | void> {
         try {
-            if (!req.user) {
-                return res.status(401).json({
-                    success: false,
-                    error: {
-                        message: 'User not authenticated'
-                    }
-                });
-            }
-
             const { currentPassword, newPassword } = req.body;
 
             if (!currentPassword || !newPassword) {
@@ -291,7 +264,7 @@ export class AuthController {
             }
 
             // Get user with password
-            const user = await userService.findById(req.user.id);
+            const user = await userService.findById(req.user!.id);
             if (!user) {
                 return res.status(404).json({
                     success: false,
@@ -323,7 +296,7 @@ export class AuthController {
             }
 
             // Update password
-            await userService.updatePassword(req.user.id, newPassword);
+            await userService.updatePassword(req.user!.id, newPassword);
 
             res.json({
                 success: true,

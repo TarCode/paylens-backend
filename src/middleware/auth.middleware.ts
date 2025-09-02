@@ -21,7 +21,21 @@ export interface AuthRequest extends Request {
     user?: Express.User;
 }
 
-export const authenticateToken = async (
+/**
+ * Enhanced authentication middleware that combines JWT verification and user existence check.
+ * This middleware should be used for all protected routes.
+ * 
+ * @example
+ * In your route file:
+ * router.get('/profile', authenticateAndEnsureUser, userController.getProfile);
+ * 
+ * For routes that also need role checking:
+ * router.get('/admin', authenticateAndEnsureUser, requireRole(['admin']), adminController.getData);
+ * 
+ * For routes that need subscription limit checking:
+ * router.post('/api-call', authenticateAndEnsureUser, checkSubscriptionLimits, apiController.makeCall);
+ */
+export const authenticateAndEnsureUser = async (
     req: Request,
     res: Response,
     next: NextFunction
@@ -53,6 +67,16 @@ export const authenticateToken = async (
             billingPeriodStart: decoded.billingPeriodStart || new Date()
         };
 
+        // Ensure user exists (this should always pass after the above assignment)
+        if (!req.user) {
+            return res.status(500).json({
+                success: false,
+                error: {
+                    message: 'Authentication failed'
+                }
+            });
+        }
+
         next();
     } catch (error) {
         console.error('JWT verification error:', error);
@@ -63,63 +87,4 @@ export const authenticateToken = async (
             }
         });
     }
-};
-
-export const checkSubscriptionLimits = (
-    req: Request,
-    res: Response,
-    next: NextFunction
-): Response | void => {
-    if (!req.user) {
-        return res.status(401).json({
-            success: false,
-            error: { message: 'User not authenticated' }
-        });
-    }
-
-    const { usageCount, monthlyLimit, subscriptionTier } = req.user;
-
-    // Skip limits for enterprise users
-    if (subscriptionTier === 'enterprise') {
-        return next();
-    }
-
-    // Check usage limits
-    if (usageCount >= monthlyLimit) {
-        return res.status(429).json({
-            success: false,
-            error: {
-                message: 'Monthly usage limit exceeded. Please upgrade your subscription.',
-                code: 'USAGE_LIMIT_EXCEEDED',
-                currentUsage: usageCount,
-                limit: monthlyLimit
-            }
-        });
-    }
-
-    next();
-};
-
-export const requireRole = (roles: string[]) => {
-    return (req: Request, res: Response, next: NextFunction): Response | void => {
-        if (!req.user) {
-            return res.status(401).json({
-                success: false,
-                error: { message: 'User not authenticated' }
-            });
-        }
-
-        if (!roles.includes(req.user.role)) {
-            return res.status(403).json({
-                success: false,
-                error: {
-                    message: 'Insufficient permissions',
-                    requiredRoles: roles,
-                    userRole: req.user.role
-                }
-            });
-        }
-
-        next();
-    };
 };

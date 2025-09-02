@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import passport from 'passport';
 import { authController } from '../controllers/auth.controller';
-import { authenticateToken } from '../middleware/auth.middleware';
+import { authenticateAndEnsureUser } from '../middleware/auth.middleware';
 
 const router = Router();
 
@@ -25,8 +25,8 @@ router.get('/google/callback',
 router.post('/google/jwt', authController.googleJWTAuth);
 
 // Protected routes (authentication required)
-router.get('/profile', authenticateToken, authController.getProfile);
-router.put('/profile', authenticateToken, authController.updateProfile);
-router.post('/change-password', authenticateToken, authController.changePassword);
+router.get('/profile', authenticateAndEnsureUser, authController.getProfile);
+router.put('/profile', authenticateAndEnsureUser, authController.updateProfile);
+router.post('/change-password', authenticateAndEnsureUser, authController.changePassword);
 
 export default router;
