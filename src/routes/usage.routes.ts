@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { usageController } from '../controllers/usage.controller';
 import { authenticateAndEnsureUser } from '../middleware/auth.middleware';
 import { securityMiddleware } from '../middleware/security.middleware';
-import { usageRateLimit } from '@/middleware/rateLimit.middleware';
+import { usageRateLimit } from '../middleware/rateLimit.middleware';
 
 const router = Router();
 
