@@ -4,54 +4,15 @@ import { authService } from '../services/auth.service';
 import { userService } from '../services/user.service';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { GoogleProfile } from '../models/User';
+import { badRequest, created, notFound, ok, serverError, unauthorized } from '../validation/auth.validation';
 
 export class AuthController {
-    // Validation rules
-    registerValidation = [
-        body('email')
-            .isEmail()
-            .normalizeEmail()
-            .withMessage('Please provide a valid email'),
-        body('password')
-            .isLength({ min: 8 })
-            .withMessage('Password must be at least 8 characters long'),
-        body('firstName')
-            .trim()
-            .isLength({ min: 2, max: 100 })
-            .withMessage('First name must be between 2 and 100 characters'),
-        body('lastName')
-            .trim()
-            .isLength({ min: 2, max: 100 })
-            .withMessage('Last name must be between 2 and 100 characters'),
-        body('companyName')
-            .optional()
-            .trim()
-            .isLength({ max: 255 })
-            .withMessage('Company name must be less than 255 characters')
-    ];
-
-    loginValidation = [
-        body('email')
-            .isEmail()
-            .normalizeEmail()
-            .withMessage('Please provide a valid email'),
-        body('password')
-            .notEmpty()
-            .withMessage('Password is required')
-    ];
-
     async register(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
         try {
             // Check validation errors
             const errors = validationResult(req);
             if (!errors.isEmpty()) {
-                return res.status(400).json({
-                    success: false,
-                    error: {
-                        message: 'Validation failed',
-                        details: errors.array()
-                    }
-                });
+                return badRequest(res, errors.array());
             }
 
             const { email, password, firstName, lastName, companyName } = req.body;
@@ -59,13 +20,7 @@ export class AuthController {
             // Validate password strength
             const passwordValidation = authService.validatePassword(password);
             if (!passwordValidation.isValid) {
-                return res.status(400).json({
-                    success: false,
-                    error: {
-                        message: 'Password does not meet requirements',
-                        details: passwordValidation.errors
-                    }
-                });
+                return badRequest(res, passwordValidation.errors);
             }
 
             const result = await authService.register({
@@ -78,22 +33,16 @@ export class AuthController {
 
             const sanitizedUser = authService.sanitizeUser(result.user);
 
-            res.status(201).json({
-                success: true,
-                message: 'User registered successfully',
-                data: {
+            return created(
+                res,
+                {
                     user: sanitizedUser,
                     tokens: result.tokens
-                }
-            });
+                }, 'User registered successfully'
+            );
         } catch (error: any) {
             if (error.message === 'User with this email already exists') {
-                return res.status(409).json({
-                    success: false,
-                    error: {
-                        message: error.message
-                    }
-                });
+                return badRequest(res, error.message);
             }
             next(error);
         }
@@ -104,13 +53,7 @@ export class AuthController {
             // Check validation errors
             const errors = validationResult(req);
             if (!errors.isEmpty()) {
-                return res.status(400).json({
-                    success: false,
-                    error: {
-                        message: 'Validation failed',
-                        details: errors.array()
-                    }
-                });
+                return badRequest(res, errors.array());
             }
 
             const { email, password } = req.body;
@@ -123,23 +66,14 @@ export class AuthController {
 
             const sanitizedUser = authService.sanitizeUser(result.user);
 
-            res.json({
-                success: true,
-                message: 'Login successful',
-                data: {
-                    user: sanitizedUser,
-                    tokens: result.tokens
-                }
+            return ok(res, {
+                user: sanitizedUser,
+                tokens: result.tokens
             });
         } catch (error: any) {
             if (error.message === 'Invalid email or password' ||
                 error.message === 'Account is deactivated. Please contact support.') {
-                return res.status(401).json({
-                    success: false,
-                    error: {
-                        message: error.message
-                    }
-                });
+                return unauthorized(res, error.message);
             }
             next(error);
         }
@@ -150,33 +84,19 @@ export class AuthController {
             const { refreshToken } = req.body;
 
             if (!refreshToken) {
-                return res.status(400).json({
-                    success: false,
-                    error: {
-                        message: 'Refresh token is required'
-                    }
-                });
+                return badRequest(res, 'Refresh token is required');
             }
 
             const result = await authService.refreshToken(refreshToken);
 
             const sanitizedUser = authService.sanitizeUser(result.user);
 
-            res.json({
-                success: true,
-                message: 'Token refreshed successfully',
-                data: {
-                    user: sanitizedUser,
-                    tokens: result.tokens
-                }
+            return ok(res, {
+                user: sanitizedUser,
+                tokens: result.tokens
             });
         } catch (error: any) {
-            return res.status(401).json({
-                success: false,
-                error: {
-                    message: error.message
-                }
-            });
+            return unauthorized(res, error.message);
         }
     }
 
@@ -184,21 +104,13 @@ export class AuthController {
         try {
             const user = await userService.findById(req.user!.id);
             if (!user) {
-                return res.status(404).json({
-                    success: false,
-                    error: {
-                        message: 'User not found'
-                    }
-                });
+                return notFound(res, 'User not found');
             }
 
             const sanitizedUser = authService.sanitizeUser(user);
 
-            res.json({
-                success: true,
-                data: {
-                    user: sanitizedUser
-                }
+            return ok(res, {
+                user: sanitizedUser
             });
         } catch (error) {
             next(error);
@@ -216,22 +128,13 @@ export class AuthController {
 
             const updatedUser = await userService.updateUser(req.user!.id, updateData);
             if (!updatedUser) {
-                return res.status(404).json({
-                    success: false,
-                    error: {
-                        message: 'User not found'
-                    }
-                });
+                return notFound(res, 'User not found');
             }
 
             const sanitizedUser = authService.sanitizeUser(updatedUser);
 
-            res.json({
-                success: true,
-                message: 'Profile updated successfully',
-                data: {
-                    user: sanitizedUser
-                }
+            return ok(res, {
+                user: sanitizedUser
             });
         } catch (error) {
             next(error);
@@ -243,65 +146,39 @@ export class AuthController {
             const { currentPassword, newPassword } = req.body;
 
             if (!currentPassword || !newPassword) {
-                return res.status(400).json({
-                    success: false,
-                    error: {
-                        message: 'Current password and new password are required'
-                    }
-                });
+                return badRequest(res, 'Current password and new password are required');
             }
 
             // Validate new password strength
             const passwordValidation = authService.validatePassword(newPassword);
             if (!passwordValidation.isValid) {
-                return res.status(400).json({
-                    success: false,
-                    error: {
-                        message: 'New password does not meet requirements',
-                        details: passwordValidation.errors
-                    }
-                });
+                return badRequest(res,
+                    passwordValidation.errors,
+                    'New password does not meet requirements'
+                );
             }
 
             // Get user with password
             const user = await userService.findById(req.user!.id);
             if (!user) {
-                return res.status(404).json({
-                    success: false,
-                    error: {
-                        message: 'User not found'
-                    }
-                });
+                return notFound(res, 'User not found');
             }
 
             // Check if user has a password (traditional login users)
             if (!user.password) {
-                return res.status(400).json({
-                    success: false,
-                    error: {
-                        message: 'This account uses Google OAuth and does not have a password to change'
-                    }
-                });
+                return badRequest(res, 'This account uses Google OAuth and does not have a password to change');
             }
 
             // Validate current password
             const isValidCurrentPassword = await userService.validatePassword(currentPassword, user.password);
             if (!isValidCurrentPassword) {
-                return res.status(400).json({
-                    success: false,
-                    error: {
-                        message: 'Current password is incorrect'
-                    }
-                });
+                return badRequest(res, 'Current password is incorrect');
             }
 
             // Update password
             await userService.updatePassword(req.user!.id, newPassword);
 
-            res.json({
-                success: true,
-                message: 'Password changed successfully'
-            });
+            return created(res, null, 'Password changed successfully');
         } catch (error) {
             next(error);
         }
@@ -312,12 +189,7 @@ export class AuthController {
             const { email } = req.body;
 
             if (!email) {
-                return res.status(400).json({
-                    success: false,
-                    error: {
-                        message: 'Email is required'
-                    }
-                });
+                return badRequest(res, 'Email is required');
             }
 
             // Always return success for security (don't reveal if email exists)
@@ -328,10 +200,7 @@ export class AuthController {
                 // Silently ignore errors for security
             }
 
-            res.json({
-                success: true,
-                message: 'If an account with that email exists, a password reset link has been sent.'
-            });
+            return created(res, null, 'If an account with that email exists, a password reset link has been sent.')
         } catch (error) {
             next(error);
         }
@@ -342,51 +211,31 @@ export class AuthController {
             const { token, newPassword } = req.body;
 
             if (!token || !newPassword) {
-                return res.status(400).json({
-                    success: false,
-                    error: {
-                        message: 'Token and new password are required'
-                    }
-                });
+                return badRequest(res, 'Token and new password are required');
             }
 
             // Validate password strength
             const passwordValidation = authService.validatePassword(newPassword);
             if (!passwordValidation.isValid) {
-                return res.status(400).json({
-                    success: false,
-                    error: {
-                        message: 'Password does not meet requirements',
-                        details: passwordValidation.errors
-                    }
-                });
+                return badRequest(res, 'Password does not meet requirements');
             }
 
             await authService.resetPassword(token, newPassword);
 
-            res.json({
+            return ok(res, {
                 success: true,
                 message: 'Password reset successfully'
             });
         } catch (error: any) {
-            return res.status(400).json({
-                success: false,
-                error: {
-                    message: error.message
-                }
-            });
+            return badRequest(res, error.message);
         }
     }
+
 
     async googleAuthCallback(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
         try {
             if (!req.user) {
-                return res.status(401).json({
-                    success: false,
-                    error: {
-                        message: 'Google authentication failed'
-                    }
-                });
+                return unauthorized(res, 'User not found');
             }
 
             // The user profile is set by passport - it should be a GoogleProfile
@@ -397,23 +246,14 @@ export class AuthController {
 
             // For API response, return JSON with tokens
             // In a real frontend integration, you'd redirect to the frontend with tokens
-            res.json({
-                success: true,
-                message: result.isNewUser ? 'User registered successfully with Google' : 'Login successful with Google',
-                data: {
-                    user: sanitizedUser,
-                    tokens: result.tokens,
-                    isNewUser: result.isNewUser
-                }
+            return ok(res, {
+                user: sanitizedUser,
+                tokens: result.tokens,
+                isNewUser: result.isNewUser
             });
         } catch (error: any) {
             console.error('Google auth callback error:', error);
-            return res.status(500).json({
-                success: false,
-                error: {
-                    message: error.message || 'Google authentication failed'
-                }
-            });
+            return unauthorized(res, 'Google authentication failed');
         }
     }
 
@@ -422,12 +262,7 @@ export class AuthController {
             const { credential } = req.body;
 
             if (!credential) {
-                return res.status(400).json({
-                    success: false,
-                    error: {
-                        message: 'Google JWT credential is required'
-                    }
-                });
+                return badRequest(res, 'Google JWT credential is required');
             }
 
             // Decode the JWT token to get user info
@@ -448,23 +283,17 @@ export class AuthController {
             const result = await authService.authenticateWithGoogle(profile);
             const sanitizedUser = authService.sanitizeUser(result.user);
 
-            res.json({
-                success: true,
-                message: result.isNewUser ? 'User registered successfully with Google' : 'Login successful with Google',
-                data: {
+            return created(
+                res,
+                {
                     user: sanitizedUser,
                     tokens: result.tokens,
                     isNewUser: result.isNewUser
-                }
-            });
+                }, result.isNewUser ? 'User registered successfully with Google' : 'Login successful with Google'
+            );
         } catch (error: any) {
             console.error('Google JWT auth error:', error);
-            return res.status(500).json({
-                success: false,
-                error: {
-                    message: error.message || 'Google authentication failed'
-                }
-            });
+            return serverError(res, error.message || 'Google authentication failed');
         }
     }
 }

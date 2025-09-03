@@ -2,12 +2,13 @@ import { Router } from 'express';
 import passport from 'passport';
 import { authController } from '../controllers/auth.controller';
 import { authenticateAndEnsureUser } from '../middleware/auth.middleware';
+import { loginValidation, registerValidation } from '../validation/auth.validation';
 
 const router = Router();
 
 // Public routes (no authentication required)
-router.post('/register', authController.registerValidation, authController.register);
-router.post('/login', authController.loginValidation, authController.login);
+router.post('/register', registerValidation, authController.register);
+router.post('/login', loginValidation, authController.login);
 router.post('/refresh-token', authController.refreshToken);
 router.post('/forgot-password', authController.forgotPassword);
 router.post('/reset-password', authController.resetPassword);
