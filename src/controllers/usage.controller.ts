@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { userService } from '../services/user.service';
 import { authService } from '../services/auth.service';
+import { badRequest, notFound, ok, serverError, tooManyRequests } from '../validation/usage.validation';
 
 // In-memory request deduplication cache (use Redis in production)
 const recentRequests = new Map<string, number>();
@@ -11,7 +12,6 @@ export class UsageController {
     async incrementUsage(req: AuthRequest, res: Response): Promise<Response> {
         try {
             const userId = req.user!.id;
-            const requestKey = `${userId}-${Date.now()}`;
             const now = Date.now();
 
             // Request deduplication - prevent rapid duplicate requests
@@ -19,12 +19,9 @@ export class UsageController {
                 const lastRequestTime = recentRequests.get(userId)!;
                 if (now - lastRequestTime < REQUEST_DEDUPE_WINDOW) {
                     console.warn(`🚨 Rapid usage request blocked for user ${userId} from ${req.ip}`);
-                    return res.status(429).json({
-                        success: false,
-                        error: {
-                            message: 'Request too frequent. Please wait before trying again.',
-                            code: 'REQUEST_TOO_FREQUENT'
-                        }
+                    return tooManyRequests(res, {
+                        message: 'Request too frequent. Please wait before trying again.',
+                        code: 'REQUEST_TOO_FREQUENT'
                     });
                 }
             }
@@ -51,72 +48,54 @@ export class UsageController {
                 }
 
                 // Determine appropriate status code based on error
-                const statusCode = result.error?.includes('not found') ? 404 :
-                    result.error?.includes('limit exceeded') ? 429 : 400;
+                return result.error?.includes('not found') ?
+                    notFound(res, result.error) :
+                    result.error?.includes('limit exceeded') ?
+                        tooManyRequests(res, {
+                            message: result.error,
+                            code: 'USAGE_LIMIT_EXCEEDED',
+                            currentUsage: result.user?.usageCount,
+                            limit: result.user?.monthlyLimit,
+                            wasReset: result.wasReset || false
+                        }) : badRequest(res, result.error, 'INCREMENT_FAILED');
 
-                return res.status(statusCode).json({
-                    success: false,
-                    error: {
-                        message: result.error,
-                        code: statusCode === 429 ? 'USAGE_LIMIT_EXCEEDED' : 'INCREMENT_FAILED',
-                        currentUsage: result.user?.usageCount,
-                        limit: result.user?.monthlyLimit,
-                        wasReset: result.wasReset || false
-                    }
-                });
             }
 
             // Generate new tokens with updated usage count
             const tokens = await authService.generateTokens(result.user!);
 
-            return res.json({
-                success: true,
-                data: {
-                    user: result.user,
-                    tokens: tokens,
-                    usageCount: result.user!.usageCount,
-                    monthlyLimit: result.user!.monthlyLimit,
-                    wasReset: result.wasReset || false
-                }
+            return ok(res, {
+                user: result.user,
+                tokens: tokens,
+                usageCount: result.user!.usageCount,
+                monthlyLimit: result.user!.monthlyLimit,
+                wasReset: result.wasReset || false
             });
         } catch (error) {
             console.error('Increment usage error:', error);
-            return res.status(500).json({
-                success: false,
-                error: { message: 'Failed to increment usage' }
-            });
+            return serverError(res, 'Failed to increment usage');
         }
     }
 
     async getUsage(req: AuthRequest, res: Response): Promise<Response> {
         try {
-            // req.user is guaranteed to exist due to authenticateAndEnsureUser middleware
             const userId = req.user!.id;
             const user = await userService.findById(userId);
 
             if (!user) {
-                return res.status(404).json({
-                    success: false,
-                    error: { message: 'User not found' }
-                });
+                return notFound(res, 'User not found');
             }
 
-            return res.json({
-                success: true,
-                data: {
-                    usageCount: user.usageCount,
-                    monthlyLimit: user.monthlyLimit,
-                    subscriptionTier: user.subscriptionTier,
-                    usagePercentage: user.monthlyLimit > 0 ?
-                        Math.round((user.usageCount / user.monthlyLimit) * 100) : 0
-                }
+            return ok(res, {
+                usageCount: user.usageCount,
+                monthlyLimit: user.monthlyLimit,
+                subscriptionTier: user.subscriptionTier,
+                usagePercentage: user.monthlyLimit > 0 ?
+                    Math.round((user.usageCount / user.monthlyLimit) * 100) : 0
             });
         } catch (error) {
             console.error('Get usage error:', error);
-            return res.status(500).json({
-                success: false,
-                error: { message: 'Failed to get usage data' }
-            });
+            return serverError(res, 'Failed to get usage data');
         }
     }
 }
